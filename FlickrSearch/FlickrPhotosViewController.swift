@@ -54,16 +54,12 @@ class FlickrPhotosViewController: UICollectionViewController {
   }
   
   // MARK: UICollectionViewDataSource
-  
   override func numberOfSections(in collectionView: UICollectionView) -> Int {
-    // #warning Incomplete implementation, return the number of sections
-    return 0
+    return searches.count
   }
   
-  
   override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    // #warning Incomplete implementation, return the number of items
-    return 0
+    return searches[section].searchResults.count
   }
   
   override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -75,11 +71,41 @@ class FlickrPhotosViewController: UICollectionViewController {
   }
   
   // MARK: UICollectionViewDelegate
-
 }
 
 private extension FlickrPhotosViewController {
   func photo(for indexPath: IndexPath) -> FlickrPhoto {
     return searches[indexPath.section].searchResults[indexPath.row]
+  }
+}
+
+// MARK: TextField Delegate
+extension FlickrPhotosViewController: UITextViewDelegate {
+  func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+    guard let text = textField.text, !text.isEmpty else {
+      return true
+    }
+    let activityIndicator = UIActivityIndicatorView(style: .gray)
+    textField.addSubview(activityIndicator)
+    activityIndicator.frame = textField.bounds
+    activityIndicator.startAnimating()
+    
+    flickr.searchFlickr(for: text) { searchResults in
+      DispatchQueue.main.async {
+        activityIndicator.removeFromSuperview()
+        
+        switch searchResults {
+        case .failure(let error):
+          print("에러 검색 결과: \(error)")
+        case .success(let results):
+          print("\(results.searchTerm)에 해당하는 결과를 \(results.searchResults.count)개 찾았습니다.")
+          self.searches.insert(results, at: 0)
+          self.collectionView.reloadData() // 새로운 데이터를 UI에 보여주게 됨.
+        }
+      }
+    }
+    textField.text = nil
+    textField.resignFirstResponder()
+    return true
   }
 }
